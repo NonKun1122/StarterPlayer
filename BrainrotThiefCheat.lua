@@ -1,153 +1,142 @@
--- // Brainrot Cheat - LocalScript (วางใน StarterPlayerScripts)
--- ล่องหนแบบ Server + GUI ปุ่ม + ชื่อปลอม + กระโดดสูง/วิ่งเร็ว
-
+-- สร้าง GUI ใน CoreGui (สำหรับ Executor) หรือ PlayerGui (สำหรับรันใน Studio)
+local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
-
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid", 8)
 
--- ──────────────────────────────────────────────
---  ตั้งค่าต่าง ๆ (แก้ตรงนี้ได้เลย)
--- ──────────────────────────────────────────────
-
-local FAKE_NAME          = "Brainrot Thief"       -- ชื่อปลอมที่แสดงเหนือหัว
-local JUMP_POWER         = 150
-local WALK_SPEED         = 50
-local INVISIBLE_COLOR    = Color3.fromRGB(180, 0, 255)   -- สีตัวเมื่อล่องหน (ถ้าอยากให้มี hint)
-
--- ชื่อ RemoteEvent (ต้องตรงกับฝั่ง Server ด้วย)
-local REMOTE_NAME        = "ToggleInvisibility"
-
--- ──────────────────────────────────────────────
---  สร้าง RemoteEvent ถ้ายังไม่มี (เพื่อความสะดวก)
--- ──────────────────────────────────────────────
-
-local remote = ReplicatedStorage:FindFirstChild(REMOTE_NAME)
-if not remote then
-    remote = Instance.new("RemoteEvent")
-    remote.Name = REMOTE_NAME
-    remote.Parent = ReplicatedStorage
+-- ลบ UI เก่าทิ้งถ้ามีการรันซ้ำ
+if CoreGui:FindFirstChild("BrainrotMenu") then
+    CoreGui.BrainrotMenu:Destroy()
 end
 
--- ──────────────────────────────────────────────
---  ฟังก์ชันตั้งค่าตัวละครเมื่อเกิดใหม่
--- ──────────────────────────────────────────────
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BrainrotMenu"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui -- ถ้าใช้ใน Roblox Studio ให้เปลี่ยนเป็น player.PlayerGui
 
-local function setupCharacter(char)
-    character = char
-    humanoid = char:WaitForChild("Humanoid", 8)
-    if not humanoid then return end
+-- ปุ่มสำหรับเปิด/ปิด UI (ปุ่มเล็กๆ บนหน้าจอ)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0, 100, 0, 40)
+OpenButton.Position = UDim2.new(0, 10, 0, 10)
+OpenButton.Text = "เปิด UI"
+OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.Font = Enum.Font.SourceSansBold
+OpenButton.TextSize = 18
+OpenButton.Parent = ScreenGui
 
-    humanoid.JumpPower = JUMP_POWER
-    humanoid.WalkSpeed = WALK_SPEED
+-- กรอบ UI หลัก
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true -- ทำให้ลาก UI ได้
+MainFrame.Parent = ScreenGui
 
-    -- ชื่อปลอมเหนือหัว
-    local head = char:WaitForChild("Head")
-    local existing = head:FindFirstChild("FakeName")
-    if existing then existing:Destroy() end
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "Brainrot Hub"
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 22
+Title.Parent = MainFrame
 
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "FakeName"
-    bb.Adornee = head
-    bb.Size = UDim2.new(0, 200, 0, 50)
-    bb.StudsOffset = Vector3.new(0, 3.2, 0)
-    bb.AlwaysOnTop = true
-    bb.ResetOnSpawn = false
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = FAKE_NAME
-    label.TextColor3 = Color3.fromRGB(255, 80, 80)
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBlack
-    label.Parent = bb
-
-    bb.Parent = head
+-- ฟังก์ชันสร้างปุ่มใน Menu
+local function createButton(text, yPos)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 260, 0, 40)
+    btn.Position = UDim2.new(0, 20, 0, yPos)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.Parent = MainFrame
+    return btn
 end
 
--- เรียกใช้ตอนตัวละครโหลดครั้งแรก
-if player.Character then
-    setupCharacter(player.Character)
-end
-player.CharacterAdded:Connect(setupCharacter)
+local btnSpeedJump = createButton("วิ่งเร็ว + กระโดดสูง (เปิด)", 60)
+local btnInvis = createButton("ล่องหน (Client)", 110)
+local btnFakeName = createButton("ปลอมชื่อตัวละคร", 160)
+local btnTPHome = createButton("วาร์ปกลับบ้าน", 210)
+local btnClose = createButton("ปิด UI", 280)
+btnClose.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 
--- ──────────────────────────────────────────────
---  สร้าง GUI ปุ่มล่องหน
--- ──────────────────────────────────────────────
+-- ตัวแปรเก็บสถานะ
+local isBoosted = false
+local isInvis = false
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "BrainrotGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+-- ระบบเปิด/ปิด UI
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+btnClose.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 140, 0, 60)
-frame.Position = UDim2.new(0.5, -70, 0.92, -80)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-frame.BorderSizePixel = 0
-frame.Parent = screenGui
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = frame
-
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(1, -12, 1, -12)
-button.Position = UDim2.new(0, 6, 0, 6)
-button.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
-button.TextColor3 = Color3.new(1,1,1)
-button.Font = Enum.Font.GothamBold
-button.TextSize = 18
-button.Text = "ล่องหน (OFF)"
-button.Parent = frame
-
-local uiCornerBtn = Instance.new("UICorner")
-uiCornerBtn.CornerRadius = UDim.new(0, 10)
-uiCornerBtn.Parent = button
-
--- ตัวแปรสถานะ
-local isInvisible = false
-
-local function updateButton()
-    if isInvisible then
-        button.Text = "ล่องหน (ON)"
-        button.BackgroundColor3 = Color3.fromRGB(180, 60, 100)
-    else
-        button.Text = "ล่องหน (OFF)"
-        button.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
-    end
-end
-
--- ฟังก์ชัน toggle + ส่งไป server
-local function toggleInvisibility()
-    isInvisible = not isInvisible
-    updateButton()
-
-    -- ส่งไป server ให้จัดการ transparency จริง
-    remote:FireServer(isInvisible)
-end
-
-button.MouseButton1Click:Connect(toggleInvisibility)
-
--- ทางเลือก: กดปุ่ม E ก็ toggle ได้ (ถ้าอยากใช้ทั้งปุ่มและคีย์บอร์ด)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.E then
-        toggleInvisibility()
+-- 1. วิ่งเร็ว + กระโดดสูง
+btnSpeedJump.MouseButton1Click:Connect(function()
+    isBoosted = not isBoosted
+    local char = player.Character
+    if char and char:FindFirstChild("Humanoid") then
+        if isBoosted then
+            char.Humanoid.WalkSpeed = 100 -- ปรับความเร็ววิ่งตรงนี้
+            char.Humanoid.UseJumpPower = true
+            char.Humanoid.JumpPower = 150 -- ปรับความสูงกระโดดตรงนี้
+            btnSpeedJump.Text = "วิ่งเร็ว + กระโดดสูง (ปิด)"
+            btnSpeedJump.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
+        else
+            char.Humanoid.WalkSpeed = 16 -- ค่าเริ่มต้น Roblox
+            char.Humanoid.JumpPower = 50 -- ค่าเริ่มต้น Roblox
+            btnSpeedJump.Text = "วิ่งเร็ว + กระโดดสูง (เปิด)"
+            btnSpeedJump.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end
     end
 end)
 
--- ──────────────────────────────────────────────
---  รับสถานะจาก server (กรณี reset หรือ sync)
--- ──────────────────────────────────────────────
-
-remote.OnClientEvent:Connect(function(serverIsInvisible)
-    isInvisible = serverIsInvisible
-    updateButton()
+-- 2. ล่องหน (Transparency)
+btnInvis.MouseButton1Click:Connect(function()
+    isInvis = not isInvis
+    local char = player.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") or part:IsA("Decal") then
+                if part.Name ~= "HumanoidRootPart" then
+                    part.Transparency = isInvis and 1 or 0
+                end
+            end
+        end
+        if isInvis then
+            btnInvis.Text = "ยกเลิกล่องหน"
+            btnInvis.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
+        else
+            btnInvis.Text = "ล่องหน (Client)"
+            btnInvis.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        end
+    end
 end)
 
-print("[Brainrot Cheat] พร้อมใช้งาน → ปุ่มล่องหน / กด E")
+-- 3. ปลอมชื่อตัวละคร
+btnFakeName.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("Humanoid") then
+        -- เปลี่ยนชื่อเหนือหัว (เปลี่ยนได้แค่ในจอเราเท่านั้น)
+        char.Humanoid.DisplayName = "ผู้เล่นปริศนา" 
+        btnFakeName.Text = "เปลี่ยนชื่อแล้ว!"
+        task.wait(2)
+        btnFakeName.Text = "ปลอมชื่อตัวละคร"
+    end
+end)
+
+-- 4. วาร์ปกลับบ้าน (แก้ไขพิกัด X, Y, Z ได้เลย)
+btnTPHome.MouseButton1Click:Connect(function()
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        -- เปลี่ยน 0, 50, 0 เป็นพิกัดจุดเกิดหรือบ้านในแมพของคุณ
+        local homePosition = CFrame.new(0, 50, 0) 
+        char:PivotTo(homePosition)
+    end
+end)
