@@ -1,142 +1,142 @@
--- [[ BRAINROT HUB: COMPLETE EDITION ]] --
+-- [[ BRAINROT HUB: ULTIMATE EDITION (NO BUG) ]] --
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
-local player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
--- ลบ UI เก่าหากมีการรันซ้ำ
-if CoreGui:FindFirstChild("BrainrotComplete") then
-    CoreGui.BrainrotComplete:Destroy()
+-- ป้องกันการรันสคริปต์ซ้ำ
+if CoreGui:FindFirstChild("BrainrotUltimate") then
+    CoreGui.BrainrotUltimate:Destroy()
 end
 
--- สร้างหน้าจอหลัก
+-- สร้างหน้าจอ GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BrainrotComplete"
+ScreenGui.Name = "BrainrotUltimate"
 ScreenGui.Parent = CoreGui
-ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
 
--- ปุ่มเปิด/ปิด Menu (เล็กๆ ด้านบน)
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 80, 0, 30)
-ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
-ToggleBtn.Text = "เปิด/ปิด Menu"
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Parent = ScreenGui
-
--- ตัวแปรสถานะ
-local noclipEnabled = false
-local speedJumpEnabled = false
-local invisEnabled = false
+-- ตัวแปรตั้งค่า
+local Settings = {
+    Speed = 100,
+    Jump = 150,
+    Noclip = false,
+    Invis = false
+}
 
 -- กรอบเมนูหลัก
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 250, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 2
-MainFrame.Visible = false
+MainFrame.Size = UDim2.new(0, 260, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
+MainFrame.Draggable = true -- สามารถลากได้
 MainFrame.Parent = ScreenGui
 
+-- หัวข้อ
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "🔥 BRAINROT HUB 🔥"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Title.Text = "BRAINROT HUB V4"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
 Title.Parent = MainFrame
 
--- ฟังก์ชันสร้างปุ่มในเมนู
-local function createButton(name, yPos, color, callback)
+-- ฟังก์ชันสร้างปุ่มที่ไม่มีบัค
+local function CreateButton(text, pos, callback)
     local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(0, 210, 0, 45)
-    btn.Position = UDim2.new(0.5, -105, 0, yPos)
-    btn.Text = name
-    btn.BackgroundColor3 = color
+    btn.Size = UDim2.new(0, 220, 0, 45)
+    btn.Position = UDim2.new(0, 20, 0, pos)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     btn.TextColor3 = Color3.new(1, 1, 1)
     btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 18
+    btn.TextSize = 16
+    btn.BorderSizePixel = 0
     btn.Parent = MainFrame
-    btn.MouseButton1Click:Connect(callback)
+    
+    btn.MouseButton1Click:Connect(function()
+        pcall(callback) -- ใช้ pcall กันสคริปต์หยุดทำงานเวลาเจอ Error
+    end)
     return btn
 end
 
--- 1. ฟังก์ชัน: วิ่งเร็ว + กระโดดสูง
-createButton("Speed & High Jump", 60, Color3.fromRGB(60, 60, 60), function()
-    speedJumpEnabled = not speedJumpEnabled
-    local char = player.Character
-    if char and char:FindFirstChild("Humanoid") then
-        if speedJumpEnabled then
-            char.Humanoid.WalkSpeed = 120
-            char.Humanoid.JumpPower = 180
-            char.Humanoid.UseJumpPower = true
-        else
-            char.Humanoid.WalkSpeed = 16
-            char.Humanoid.JumpPower = 50
-        end
+-- 1. วิ่งเร็ว + กระโดดสูง (Auto-Update)
+CreateButton("Speed & Jump (Toggle)", 60, function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = (hum.WalkSpeed == 16) and Settings.Speed or 16
+        hum.JumpPower = (hum.JumpPower == 50) and Settings.Jump or 50
+        hum.UseJumpPower = true
     end
 end)
 
--- 2. ฟังก์ชัน: ทะลุบล็อก (Noclip)
-createButton("Noclip (ทะลุบล็อก)", 115, Color3.fromRGB(60, 60, 60), function()
-    noclipEnabled = not noclipEnabled
+-- 2. ทะลุบล็อก (Noclip)
+local noclipBtn = CreateButton("Noclip: OFF", 115, function()
+    Settings.Noclip = not Settings.Noclip
 end)
 
--- Loop สำหรับ Noclip (ทำงานตลอดเวลาถ้าเปิด)
 RunService.Stepped:Connect(function()
-    if noclipEnabled and player.Character then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+    if Settings.Noclip then
+        noclipBtn.Text = "Noclip: ON"
+        noclipBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
+    else
+        noclipBtn.Text = "Noclip: OFF"
+        noclipBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     end
 end)
 
--- 3. ฟังก์ชัน: ล่องหนแบบ Server (ลบส่วนประกอบที่ทำให้มองเห็น)
-createButton("Server Invisible (ลบตัว)", 170, Color3.fromRGB(60, 60, 60), function()
-    local char = player.Character
+-- 3. ล่องหนแบบสมบูรณ์ (Server-Side Visibility)
+CreateButton("Invisible (Server)", 170, function()
+    local char = LocalPlayer.Character
     if char then
-        -- ลบ Mesh และส่วนประกอบอื่นๆ เพื่อให้ตัวโปร่งใสในสายตาคนอื่น
+        -- ลบเฉพาะส่วนที่แสดงผล แต่ไม่ลบส่วนที่ใช้ขยับ เพื่อไม่ให้ตัวตาย
         for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
-                v:Destroy() 
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" and v.Name ~= "UpperTorso" then
+                v.Transparency = 1
+                v:ClearAllChildren() -- ลบ Mesh ด้านใน
             elseif v:IsA("Decal") or v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") then
                 v:Destroy()
             end
         end
-        print("ตัวละครล่องหนแล้ว (คนอื่นจะไม่เห็นชิ้นส่วนของคุณ)")
     end
 end)
 
--- 4. ฟังก์ชัน: ปลอมชื่อ (Display Name)
-createButton("Fake Name (เปลี่ยนชื่อ)", 225, Color3.fromRGB(60, 60, 60), function()
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        player.Character.Humanoid.DisplayName = "Admin_Ghost_99"
+-- 4. เปลี่ยนชื่อ (Display Name)
+CreateButton("Fake Display Name", 225, function()
+    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.DisplayName = "SYSTEM_ADMIN"
     end
 end)
 
--- 5. ฟังก์ชัน: วาร์ปกลับบ้าน (Spawn Point)
-createButton("Teleport Home", 280, Color3.fromRGB(40, 100, 40), function()
-    if player.Character then
-        -- ใช้ MoveTo เพื่อวาร์ปไปยังตำแหน่ง Spawn พื้นฐาน หรือตำแหน่งที่กำหนด
-        local spawnPos = Vector3.new(0, 20, 0) -- แก้ไขพิกัดบ้านตรงนี้
-        player.Character:MoveTo(spawnPos)
+-- 5. วาร์ปกลับบ้าน (Smart TP)
+CreateButton("TP to Home / Spawn", 280, function()
+    local char = LocalPlayer.Character
+    if char then
+        -- หาจุดเกิดในเกม ถ้าหาไม่เจอจะวาร์ปไปพิกัดกลางแมพ (0, 20, 0)
+        local spawnLocation = game:GetService("Workspace"):FindFirstChildOfClass("SpawnLocation")
+        local targetPos = spawnLocation and spawnLocation.CFrame + Vector3.new(0, 5, 0) or CFrame.new(0, 20, 0)
+        char:PivotTo(targetPos)
     end
 end)
 
--- ปุ่มปิด UI
-ToggleBtn.MouseButton1Click:Connect(function()
+-- ปุ่มเปิด/ปิด UI เล็กๆ บนหน้าจอ
+local Toggle = Instance.new("TextButton")
+Toggle.Size = UDim2.new(0, 80, 0, 30)
+Toggle.Position = UDim2.new(0, 10, 0, 10)
+Toggle.Text = "Close Menu"
+Toggle.Parent = ScreenGui
+
+Toggle.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
-end)
-
--- จัดการเวลาตัวละครตายแล้วเกิดใหม่ (Reset สถาณะ)
-player.CharacterAdded:Connect(function(char)
-    noclipEnabled = false
-    speedJumpEnabled = false
+    Toggle.Text = MainFrame.Visible and "Close Menu" or "Open Menu"
 end)
