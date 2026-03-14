@@ -1,142 +1,133 @@
--- [[ BRAINROT HUB: ULTIMATE EDITION (NO BUG) ]] --
+-- [[ BRAINROT HUB: CLOAK & FLY EDITION ]] --
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
--- ป้องกันการรันสคริปต์ซ้ำ
-if CoreGui:FindFirstChild("BrainrotUltimate") then
-    CoreGui.BrainrotUltimate:Destroy()
-end
+-- ลบ UI เก่า
+if CoreGui:FindFirstChild("BrainrotCloak") then CoreGui.BrainrotCloak:Destroy() end
 
--- สร้างหน้าจอ GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BrainrotUltimate"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
+-- สร้าง UI
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "BrainrotCloak"
 
--- ตัวแปรตั้งค่า
-local Settings = {
-    Speed = 100,
-    Jump = 150,
-    Noclip = false,
-    Invis = false
-}
-
--- กรอบเมนูหลัก
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 250, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -125, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- สามารถลากได้
-MainFrame.Parent = ScreenGui
+MainFrame.Draggable = true
 
--- หัวข้อ
-local Title = Instance.new("TextLabel")
+local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "BRAINROT HUB V4"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+Title.Text = "GHOST MOD V5"
+Title.BackgroundColor3 = Color3.fromRGB(40, 0, 80)
+Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 20
-Title.Parent = MainFrame
 
--- ฟังก์ชันสร้างปุ่มที่ไม่มีบัค
-local function CreateButton(text, pos, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 220, 0, 45)
-    btn.Position = UDim2.new(0, 20, 0, pos)
-    btn.Text = text
-    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
-    btn.BorderSizePixel = 0
-    btn.Parent = MainFrame
-    
-    btn.MouseButton1Click:Connect(function()
-        pcall(callback) -- ใช้ pcall กันสคริปต์หยุดทำงานเวลาเจอ Error
-    end)
-    return btn
+-- ตัวแปรสถานะ
+local flying = false
+local noclip = false
+local flySpeed = 50
+
+-- ฟังก์ชันสร้างปุ่ม
+local function createBtn(text, y, callback)
+    local b = Instance.new("TextButton", MainFrame)
+    b.Size = UDim2.new(0, 210, 0, 45)
+    b.Position = UDim2.new(0, 20, 0, y)
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.SourceSansBold
+    b.MouseButton1Click:Connect(callback)
+    return b
 end
 
--- 1. วิ่งเร็ว + กระโดดสูง (Auto-Update)
-CreateButton("Speed & Jump (Toggle)", 60, function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+-- 1. ระบบบินและลอยกลางอากาศ (Fly)
+createBtn("Fly: OFF (ลอยกลางอากาศ)", 60, function(self)
+    flying = not flying
+    local char = LocalPlayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = (hum.WalkSpeed == 16) and Settings.Speed or 16
-        hum.JumpPower = (hum.JumpPower == 50) and Settings.Jump or 50
-        hum.UseJumpPower = true
+    local root = char:FindFirstChild("HumanoidRootPart")
+    
+    if flying then
+        self.Text = "Fly: ON"
+        self.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+        
+        local bv = Instance.new("BodyVelocity", root)
+        bv.Name = "FlyVelocity"
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.Velocity = Vector3.new(0, 0, 0)
+        
+        local bg = Instance.new("BodyGyro", root)
+        bg.Name = "FlyGyro"
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 9e4
+        bg.CFrame = root.CFrame
+        
+        task.spawn(function()
+            while flying do
+                RunService.RenderStepped:Wait()
+                bv.Velocity = ((Workspace.CurrentCamera.CFrame.LookVector * (hum.MoveDirection.Z > 0 and flySpeed or (hum.MoveDirection.Z < 0 and -flySpeed or 0))) + (Workspace.CurrentCamera.CFrame.RightVector * (hum.MoveDirection.X > 0 and flySpeed or (hum.MoveDirection.X < 0 and -flySpeed or 0))))
+                if not flying then bv:Destroy() bg:Destroy() break end
+            end
+        end)
+    else
+        self.Text = "Fly: OFF"
+        self.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- 2. ทะลุบล็อก (Noclip)
-local noclipBtn = CreateButton("Noclip: OFF", 115, function()
-    Settings.Noclip = not Settings.Noclip
+-- 2. ระบบทะลุบล็อก (Noclip)
+createBtn("Noclip: OFF (ทะลุบล็อก)", 120, function(self)
+    noclip = not noclip
+    self.Text = noclip and "Noclip: ON" or "Noclip: OFF"
+    self.BackgroundColor3 = noclip and Color3.fromRGB(0, 120, 0) or Color3.fromRGB(50, 50, 50)
 end)
 
 RunService.Stepped:Connect(function()
-    if Settings.Noclip then
-        noclipBtn.Text = "Noclip: ON"
-        noclipBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        if LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
+    if noclip and LocalPlayer.Character then
+        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
         end
-    else
-        noclipBtn.Text = "Noclip: OFF"
-        noclipBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     end
 end)
 
--- 3. ล่องหนแบบสมบูรณ์ (Server-Side Visibility)
-CreateButton("Invisible (Server)", 170, function()
+-- 3. ระบบผ้าคลุมล่องหน (Invisibility Cloak)
+createBtn("Invis Cloak (ล่องหน)", 180, function()
     local char = LocalPlayer.Character
     if char then
-        -- ลบเฉพาะส่วนที่แสดงผล แต่ไม่ลบส่วนที่ใช้ขยับ เพื่อไม่ให้ตัวตาย
         for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" and v.Name ~= "UpperTorso" then
-                v.Transparency = 1
-                v:ClearAllChildren() -- ลบ Mesh ด้านใน
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+                v.Transparency = 1 -- ทำให้จางหาย 100%
             elseif v:IsA("Decal") or v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") then
-                v:Destroy()
+                v:Destroy() -- ลบส่วนประกอบอื่นทิ้งเพื่อให้คนอื่นมองไม่เห็นแน่นอน
             end
+        end
+        -- ลบชื่อเหนือหัว
+        if char:FindFirstChild("Head") and char.Head:FindFirstChild("Nametag") then
+            char.Head.Nametag:Destroy()
         end
     end
 end)
 
--- 4. เปลี่ยนชื่อ (Display Name)
-CreateButton("Fake Display Name", 225, function()
-    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.DisplayName = "SYSTEM_ADMIN"
+-- 4. วาร์ปกลับบ้าน (Smart Home)
+createBtn("Teleport Home", 240, function()
+    if LocalPlayer.Character then
+        local spawn = Workspace:FindFirstChildOfClass("SpawnLocation")
+        LocalPlayer.Character:PivotTo(spawn and spawn.CFrame + Vector3.new(0,5,0) or CFrame.new(0,50,0))
     end
 end)
 
--- 5. วาร์ปกลับบ้าน (Smart TP)
-CreateButton("TP to Home / Spawn", 280, function()
-    local char = LocalPlayer.Character
-    if char then
-        -- หาจุดเกิดในเกม ถ้าหาไม่เจอจะวาร์ปไปพิกัดกลางแมพ (0, 20, 0)
-        local spawnLocation = game:GetService("Workspace"):FindFirstChildOfClass("SpawnLocation")
-        local targetPos = spawnLocation and spawnLocation.CFrame + Vector3.new(0, 5, 0) or CFrame.new(0, 20, 0)
-        char:PivotTo(targetPos)
-    end
-end)
-
--- ปุ่มเปิด/ปิด UI เล็กๆ บนหน้าจอ
-local Toggle = Instance.new("TextButton")
-Toggle.Size = UDim2.new(0, 80, 0, 30)
-Toggle.Position = UDim2.new(0, 10, 0, 10)
-Toggle.Text = "Close Menu"
-Toggle.Parent = ScreenGui
-
-Toggle.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    Toggle.Text = MainFrame.Visible and "Close Menu" or "Open Menu"
-end)
+-- ปุ่มปิดเมนู
+local toggle = Instance.new("TextButton", ScreenGui)
+toggle.Size = UDim2.new(0, 80, 0, 35)
+toggle.Position = UDim2.new(0, 10, 0, 10)
+toggle.Text = "Menu"
+toggle.BackgroundColor3 = Color3.new(0,0,0)
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
